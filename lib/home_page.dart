@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image_picker/image_picker.dart';
 
 class HomePage extends StatefulWidget {
@@ -14,12 +15,21 @@ class _HomePageState extends State<HomePage> {
   late ImagePicker imagePicker;
   File? image;
   String result = '';
+  dynamic faceDetector;
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
     imagePicker = ImagePicker();
+    final options = FaceDetectorOptions(
+      enableLandmarks: true,
+      enableClassification: true,
+      enableContours: true,
+      enableTracking: true,
+      performanceMode: .fast,
+    );
+    final faceDetector = FaceDetector(options: options);
   }
 
   void _imageFromGallery() async {
@@ -38,8 +48,9 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  detectFace() async{
-    result='';
+  detectFace() async {
+    result = '';
+    InputImage inputImage = InputImage.fromFile(image!);
     setState(() {
       image;
     });
@@ -100,8 +111,7 @@ class _HomePageState extends State<HomePage> {
               child: Text(
                 result,
                 textAlign: TextAlign.center,
-                style:
-                const TextStyle( fontSize: 36,color: Colors.red),
+                style: const TextStyle(fontSize: 36, color: Colors.red),
               ),
             ),
           ],
