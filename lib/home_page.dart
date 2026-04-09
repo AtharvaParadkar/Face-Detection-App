@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -29,7 +30,14 @@ class _HomePageState extends State<HomePage> {
       enableTracking: true,
       performanceMode: .fast,
     );
-    final faceDetector = FaceDetector(options: options);
+    faceDetector = FaceDetector(options: options);
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    faceDetector.close();
   }
 
   void _imageFromGallery() async {
@@ -51,6 +59,8 @@ class _HomePageState extends State<HomePage> {
   detectFace() async {
     result = '';
     InputImage inputImage = InputImage.fromFile(image!);
+    final List<Face> faces = await faceDetector.processImage(inputImage);
+    debugPrint("!!!!! ${faces.length}");
     setState(() {
       image;
     });
