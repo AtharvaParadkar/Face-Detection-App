@@ -43,7 +43,7 @@ class _HomePageState extends State<HomePage> {
     faceDetector.close();
   }
 
-   Future<void> _imageFromGallery() async {
+  Future<void> _imageFromGallery() async {
     XFile? pickedImage = await imagePicker.pickImage(source: .gallery);
     if (pickedImage != null) {
       image = File(pickedImage.path);
@@ -51,7 +51,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-   Future<void> _imageFromCamera() async {
+  Future<void> _imageFromCamera() async {
     XFile? clickedImage = await imagePicker.pickImage(source: .camera);
     if (clickedImage != null) {
       image = File(clickedImage.path);
@@ -60,23 +60,37 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> detectFace() async {
-    result = '';
+    setState(() {
+      img = null;
+      result = '';
+    });
     InputImage inputImage = InputImage.fromFile(image!);
     faces = await faceDetector.processImage(inputImage);
     debugPrint("!!!!! ${faces.length}");
+
+    for (int i = 0; i < faces.length; i++) {
+      Face f = faces[i];
+      if (f.smilingProbability != null) {
+        String status = f.smilingProbability! > 0.5 ? 'Smiling' : 'Serious';
+        result += '$status ';
+      }
+    }
+
     setState(() {
       image;
+      result;
     });
     drawRectangleAroundFaces();
   }
 
   Future<void> drawRectangleAroundFaces() async {
-    img = await image?.readAsBytes();
-    img = await decodeImageFromList(img);
-    setState(() {
-      img;
-      result;
-    });
+    final bytes = await image?.readAsBytes();
+    if (bytes != null) {
+      final uiImage = await decodeImageFromList(bytes);
+      setState(() {
+        img = uiImage;
+      });
+    }
   }
 
   @override
@@ -208,7 +222,7 @@ class FacePainter extends CustomPainter {
       Map<FaceContourType, FaceContour?> con = face.contours;
       List<Offset> offsetPoints = <Offset>[];
       con.forEach((key, value) {
-        if(value != null) {
+        if (value != null) {
           List<Point<int>>? points = value.points;
           for (Point p in points) {
             Offset offset = Offset(p.x.toDouble(), p.y.toDouble());
@@ -223,9 +237,16 @@ class FacePainter extends CustomPainter {
       final FaceLandmark leftEar = face.landmarks[FaceLandmarkType.leftEar]!;
       if (leftEar != null) {
         final Point<int> leftEarPos = leftEar.position;
-        canvas.drawRect(Rect.fromLTWH(leftEarPos.x.toDouble()-5, leftEarPos.y.toDouble()-5,10,10),  p3);
+        canvas.drawRect(
+          Rect.fromLTWH(
+            leftEarPos.x.toDouble() - 5,
+            leftEarPos.y.toDouble() - 5,
+            10,
+            10,
+          ),
+          p3,
+        );
       }
-
     }
   }
 
