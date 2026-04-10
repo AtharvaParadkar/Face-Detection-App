@@ -1,257 +1,130 @@
-import 'dart:io';
-import 'dart:math';
-import 'dart:ui';
-
+import 'package:face_detection/real_time_face_detection.dart';
+import 'package:face_detection/static_face_detection.dart';
 import 'package:flutter/material.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:image_picker/image_picker.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  late ImagePicker imagePicker;
-  File? image;
-  String result = '';
-  dynamic faceDetector;
-  dynamic img;
-  late List<Face> faces;
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    imagePicker = ImagePicker();
-    final options = FaceDetectorOptions(
-      enableLandmarks: true,
-      enableClassification: true,
-      enableContours: true,
-      enableTracking: true,
-      performanceMode: .fast,
-    );
-    faceDetector = FaceDetector(options: options);
-  }
-
-  @override
-  void dispose() {
-    // TODO: implement dispose
-    super.dispose();
-    faceDetector.close();
-  }
-
-  Future<void> _imageFromGallery() async {
-    XFile? pickedImage = await imagePicker.pickImage(source: .gallery);
-    if (pickedImage != null) {
-      image = File(pickedImage.path);
-      detectFace();
-    }
-  }
-
-  Future<void> _imageFromCamera() async {
-    XFile? clickedImage = await imagePicker.pickImage(source: .camera);
-    if (clickedImage != null) {
-      image = File(clickedImage.path);
-      detectFace();
-    }
-  }
-
-  Future<void> detectFace() async {
-    setState(() {
-      img = null;
-      result = '';
-    });
-    InputImage inputImage = InputImage.fromFile(image!);
-    faces = await faceDetector.processImage(inputImage);
-    debugPrint("!!!!! ${faces.length}");
-
-    for (int i = 0; i < faces.length; i++) {
-      Face f = faces[i];
-      if (f.smilingProbability != null) {
-        String status = f.smilingProbability! > 0.5 ? 'Smiling' : 'Serious';
-        result += '$status ';
-      }
-    }
-
-    setState(() {
-      image;
-      result;
-    });
-    drawRectangleAroundFaces();
-  }
-
-  Future<void> drawRectangleAroundFaces() async {
-    final bytes = await image?.readAsBytes();
-    if (bytes != null) {
-      final uiImage = await decodeImageFromList(bytes);
-      setState(() {
-        img = uiImage;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           image: DecorationImage(
             image: AssetImage("assets/images/bg.jpg"),
-            fit: .cover,
+            fit: BoxFit.cover,
           ),
         ),
-        child: Column(
-          children: [
-            SizedBox(height: 50),
-            Container(
-              margin: .only(top: 100),
-              child: Stack(
-                children: [
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: _imageFromGallery,
-                      onLongPress: _imageFromCamera,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+            ),
+          ),
+          child: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'Face Detection',
+                      style: TextStyle(
+                        fontSize: 42,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 1.5,
                       ),
-                      child:
-                          // Container(
-                          //   margin: .only(top: 8),
-                          //   child: image != null
-                          //       ? Image.file(
-                          //           image!,
-                          //           width: 335,
-                          //           height: 495,
-                          //           fit: BoxFit.fill,
-                          //         )
-                          //       : Container(
-                          //           width: 340,
-                          //           height: 330,
-                          //           color: Colors.black,
-                          //           child: const Icon(
-                          //             Icons.camera_alt,
-                          //             color: Colors.white,
-                          //             size: 100,
-                          //           ),
-                          //         ),
-                          // ),
-                          Container(
-                            width: 335,
-                            height: 450,
-                            margin: const EdgeInsets.only(top: 45),
-                            child: (image != null && img != null)
-                                ? Center(
-                                    child: FittedBox(
-                                      child: SizedBox(
-                                        width: img!.width.toDouble(),
-                                        height: img!.height.toDouble(),
-                                        child: CustomPaint(
-                                          painter: FacePainter(
-                                            facesList: faces,
-                                            imageFile: img,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : Container(
-                                    color: Colors.black,
-                                    width: 340,
-                                    height: 330,
-                                    child: const Icon(
-                                      Icons.camera_alt,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                          ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Choose an operational mode to get started',
+                      style: TextStyle(fontSize: 16, color: Colors.white70),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 60),
+                    _buildNavButton(
+                      context: context,
+                      title: 'Face Detection (Static)',
+                      icon: Icons.image_search,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => StaticFaceDetection()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    _buildNavButton(
+                      context: context,
+                      title: 'Real-Time Detection',
+                      icon: Icons.videocam,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RealTimeFaceDetection(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 60),
+                  ],
+                ),
               ),
             ),
-            Container(
-              margin: const EdgeInsets.only(top: 20),
-              child: Text(
-                result,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 36, color: Colors.red),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
-}
 
-class FacePainter extends CustomPainter {
-  List<Face> facesList;
-  dynamic imageFile;
-
-  FacePainter({required this.facesList, @required this.imageFile});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (imageFile != null) {
-      canvas.drawImage(imageFile, Offset.zero, Paint());
-    }
-    Paint p = Paint();
-    p.color = Colors.red;
-    p.style = PaintingStyle.stroke;
-    p.strokeWidth = 2;
-
-    for (Face rectangle in facesList) {
-      canvas.drawRect(rectangle.boundingBox, p);
-    }
-
-    Paint p2 = Paint();
-    p2.color = Colors.green;
-    p2.style = PaintingStyle.stroke;
-    p2.strokeWidth = 3;
-
-    Paint p3 = Paint();
-    p3.color = Colors.yellow;
-    p3.style = PaintingStyle.stroke;
-    p3.strokeWidth = 1;
-
-    for (Face face in facesList) {
-      Map<FaceContourType, FaceContour?> con = face.contours;
-      List<Offset> offsetPoints = <Offset>[];
-      con.forEach((key, value) {
-        if (value != null) {
-          List<Point<int>>? points = value.points;
-          for (Point p in points) {
-            Offset offset = Offset(p.x.toDouble(), p.y.toDouble());
-            offsetPoints.add(offset);
-          }
-          canvas.drawPoints(PointMode.points, offsetPoints, p2);
-        }
-      });
-
-      // If landmark detection was enabled with FaceDetectorOptions (mouth, ears,
-      // eyes, cheeks, and nose available):
-      final FaceLandmark leftEar = face.landmarks[FaceLandmarkType.leftEar]!;
-      if (leftEar != null) {
-        final Point<int> leftEarPos = leftEar.position;
-        canvas.drawRect(
-          Rect.fromLTWH(
-            leftEarPos.x.toDouble() - 5,
-            leftEarPos.y.toDouble() - 5,
-            10,
-            10,
+  Widget _buildNavButton({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+        backgroundColor: Colors.white.withOpacity(0.15),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Colors.white30, width: 1),
+        ),
+        elevation: 0,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 28),
           ),
-          p3,
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return true;
+          const SizedBox(width: 20),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const Icon(Icons.arrow_forward_ios, size: 20, color: Colors.white54),
+        ],
+      ),
+    );
   }
 }
