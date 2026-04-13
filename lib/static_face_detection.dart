@@ -154,8 +154,8 @@ class _StaticFaceDetectionState extends State<StaticFaceDetection>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Static Detection'),
-        backgroundColor: Colors.transparent,
+        title: const Text("Static Detection",style: TextStyle(color: Colors.white),),
+        backgroundColor: Colors.transparent,leading: InkWell(onTap: ()=>Navigator.pop(context),child: Icon(Icons.chevron_left,color: Colors.white,)),
         elevation: 0,
       ),
       extendBodyBehindAppBar: true,

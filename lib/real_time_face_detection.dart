@@ -283,8 +283,8 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text("Real-Time Detection"),
-        backgroundColor: Colors.transparent,
+        title: const Text("Real-Time Detection",style: TextStyle(color: Colors.white),),
+        backgroundColor: Colors.transparent,leading: InkWell(onTap: ()=>Navigator.pop(context),child: Icon(Icons.chevron_left,color: Colors.white,)),
         elevation: 0,
       ),
       body: Container(
