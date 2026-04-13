@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,14 +17,13 @@ class RealTimeFaceDetection extends StatefulWidget {
 }
 
 class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection> {
-
   dynamic controller;
   bool isBusy = false;
   dynamic faceDetector;
   late Size size;
   late List<Face> faces;
   late CameraDescription description = cameras[1];
-  CameraLensDirection camDirec = .front;
+  CameraLensDirection camDirec = CameraLensDirection.front;
 
   @override
   void initState() {
@@ -31,21 +32,32 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection> {
   }
 
   Future<void> initializeCamera() async {
-    final options = FaceDetectorOptions(enableContours: true,enableLandmarks: true);
+    final options = FaceDetectorOptions(
+      enableContours: true,
+      enableLandmarks: true,
+    );
     faceDetector = FaceDetector(options: options);
 
-    controller = CameraController(description, .high);
+    controller = CameraController(
+      description,
+      ResolutionPreset.high,
+      imageFormatGroup: Platform.isAndroid
+          ? ImageFormatGroup.nv21
+          : ImageFormatGroup.bgra8888,
+    );
     await controller.initialize().then((_) {
       if (!mounted) {
         return;
       }
-      controller.startImageStream((image) => {
-        if (!isBusy) {isBusy = true, img = image, doFaceDetectionOnFrame()}
-      });
+      setState(() {});
+      controller.startImageStream(
+        (image) => {
+          if (!isBusy) {isBusy = true, img = image, doFaceDetectionOnFrame()},
+        },
+      );
     });
   }
 
-  //close all resources
   @override
   void dispose() {
     controller?.dispose();
@@ -53,18 +65,27 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection> {
     super.dispose();
   }
 
-  //TODO face detection on a frame
   dynamic _scanResults;
   CameraImage? img;
-  Future<void> doFaceDetectionOnFrame() async {
-    //var frameImg = getInputImage();
-    // List<Face> faces = await faceDetector.processImage(frameImg);
-    // print("faces present = ${faces.length}");
-    setState(() {
-      //_scanResults = faces;
-      isBusy = false;
-    });
 
+  Future<void> doFaceDetectionOnFrame() async {
+    if (img == null) {
+      setState(() {
+        isBusy = false;
+      });
+      return;
+    }
+    var frameImg = getInputImage();
+    if (frameImg != null) {
+      List<Face> faces = await faceDetector.processImage(frameImg);
+      debugPrint("!!!!!! faces == ${faces.length}");
+      setState(() {
+        _scanResults = faces;
+        isBusy = false;
+      });
+    } else {
+      isBusy = false;
+    }
   }
 
   final _orientations = {
@@ -73,11 +94,8 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection> {
     DeviceOrientation.portraitDown: 180,
     DeviceOrientation.landscapeRight: 270,
   };
+
   InputImage? getInputImage() {
-    // get image rotation
-    // it is used in android to convert the InputImage from Dart to Java
-    // `rotation` is not used in iOS to convert the InputImage from Dart to Obj-C
-    // in both platforms `rotation` and `camera.lensDirection` can be used to compensate `x` and `y` coordinates on a canvas
     final camera = cameras[1];
     final sensorOrientation = camera.sensorOrientation;
     InputImageRotation? rotation;
@@ -85,13 +103,11 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection> {
       rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
     } else if (Platform.isAndroid) {
       var rotationCompensation =
-      _orientations[controller!.value.deviceOrientation];
+          _orientations[controller!.value.deviceOrientation];
       if (rotationCompensation == null) return null;
-      if (camera.lensDirection == .front) {
-        // front-facing
+      if (camera.lensDirection == CameraLensDirection.front) {
         rotationCompensation = (sensorOrientation + rotationCompensation) % 360;
       } else {
-        // back-facing
         rotationCompensation =
             (sensorOrientation - rotationCompensation + 360) % 360;
       }
@@ -100,51 +116,48 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection> {
     if (rotation == null) return null;
 
     // get image format
-    final format = InputImageFormatValue.fromRawValue(img!.format.raw);
-    // validate format depending on platform
-    // only supported formats:
-    // * nv21 for Android
-    // * bgra8888 for iOS
-    if (format == null ||
-        (Platform.isAndroid && format != InputImageFormat.nv21) ||
-        (Platform.isIOS && format != InputImageFormat.bgra8888)) return null;
+    InputImageFormat? format;
+    if (Platform.isAndroid) format = InputImageFormat.nv21;
+    if (Platform.isIOS) format = InputImageFormat.bgra8888;
+    if (format == null) return null;
 
-    // since format is constraint to nv21 or bgra8888, both only have one plane
-    if (img?.planes.length != 1) return null;
-    final plane = img?.planes.first;
+    // accumulate all planes
+    final WriteBuffer allBytes = WriteBuffer();
+    for (final Plane p in img!.planes) {
+      allBytes.putUint8List(p.bytes);
+    }
+    final bytes = allBytes.done().buffer.asUint8List();
 
-    // compose InputImage using bytes
     return InputImage.fromBytes(
-      bytes: plane!.bytes,
+      bytes: bytes,
       metadata: InputImageMetadata(
         size: Size(img!.width.toDouble(), img!.height.toDouble()),
-        rotation: rotation, // used only in Android
-        format: format, // used only in iOS
-        bytesPerRow: plane.bytesPerRow, // used only in iOS
+        rotation: rotation,
+        format: format,
+        bytesPerRow: img!.planes.first.bytesPerRow,
       ),
     );
   }
 
-  //Show rectangles around detected faces
   Widget buildResult() {
     if (_scanResults == null ||
         controller == null ||
         !controller.value.isInitialized) {
-      return Text('');
+      return const SizedBox.shrink();
     }
 
     final Size imageSize = Size(
       controller.value.previewSize!.height,
       controller.value.previewSize!.width,
     );
-    CustomPainter painter =
-    FaceDetectorPainter(imageSize, _scanResults, camDirec);
-    return CustomPaint(
-      painter: painter,
+    CustomPainter painter = FaceDetectorPainter(
+      imageSize,
+      _scanResults,
+      camDirec,
     );
+    return CustomPaint(painter: painter);
   }
 
-  //toggle camera direction
   void _toggleCameraDirection() async {
     if (camDirec == CameraLensDirection.back) {
       camDirec = CameraLensDirection.front;
@@ -154,8 +167,6 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection> {
       description = cameras[0];
     }
     await controller.stopImageStream();
-    // await controller.dispose();
-    // controller = null;
     setState(() {
       controller;
     });
@@ -165,85 +176,99 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection> {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> stackChildren = [];
     size = MediaQuery.of(context).size;
-    if (controller != null) {
-      stackChildren.add(
-        Positioned(
-          top: 0.0,
-          left: 0.0,
-          width: size.width,
-          height: size.height - 250,
-          child: Container(
-            child: (controller.value.isInitialized)
-                ? AspectRatio(
-              aspectRatio: controller.value.aspectRatio,
-              child: CameraPreview(controller),
-            )
-                : Container(),
-          ),
-        ),
-      );
-
-      // stackChildren.add(
-      //   Positioned(
-      //       top: 0.0,
-      //       left: 0.0,
-      //       width: size.width,
-      //       height: size.height - 250,
-      //       child: buildResult()),
-      // );
-    }
-
-    stackChildren.add(Positioned(
-      top: size.height - 250,
-      left: 0,
-      width: size.width,
-      height: 250,
-      child: Container(
-        color: Colors.grey,
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 80),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.cached,
-                        color: Colors.white,
-                      ),
-                      iconSize: 50,
-                      color: Colors.black,
-                      onPressed: () {
-                        _toggleCameraDirection();
-                      },
-                    )
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ));
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text("Face detector"),
-        backgroundColor: Colors.grey,
+        title: const Text("Real-Time Detection"),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
-      backgroundColor: Colors.black,
       body: Container(
-          margin: const EdgeInsets.only(top: 0),
-          color: Colors.black,
-          child: Stack(
-            children: stackChildren,
-          )),
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage("assets/images/tech_bg.png"),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              // Camera container
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Center(
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white24, width: 1),
+                        ),
+                        child: ClipOval(
+                          child:
+                              (controller != null && controller.value.isInitialized)
+                              ? SizedBox.expand(
+                                  child: FittedBox(
+                                    fit: BoxFit.cover,
+                                    child: SizedBox(
+                                      width: controller.value.previewSize!.height,
+                                      height: controller.value.previewSize!.width,
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          CameraPreview(controller),
+                                          buildResult(),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Action Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _toggleCameraDirection,
+                    icon: const Icon(Icons.flip_camera_ios),
+                    label: const Text('Flip Camera'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

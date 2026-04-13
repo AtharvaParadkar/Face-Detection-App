@@ -106,7 +106,7 @@ class _StaticFaceDetectionState extends State<StaticFaceDetection> {
         width: .infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/images/bg.jpg"),
+            image: AssetImage("assets/images/tech_bg.png"),
             fit: .cover,
           ),
         ),
