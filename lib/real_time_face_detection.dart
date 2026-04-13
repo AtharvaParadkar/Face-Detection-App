@@ -32,12 +32,16 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
   late AnimationController _ringPulseController;
   late AnimationController _faceDetectedController;
   late AnimationController _scanLineController;
+  late AnimationController _flipController;
   late Animation<double> _ringPulse;
   late Animation<double> _faceDetectedScale;
   late Animation<double> _faceDetectedOpacity;
   late Animation<double> _scanLine;
+  late Animation<double> _flipAnim;
 
   bool _faceDetected = false;
+  bool _flipping = false;
+  bool _cameraSwapped = false;
 
   @override
   void initState() {
@@ -74,6 +78,29 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
       CurvedAnimation(parent: _scanLineController, curve: Curves.linear),
     );
 
+    // Coin-flip controller: 0.0 → 1.0 over 700ms
+    _flipController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _flipAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _flipController, curve: Curves.easeInOut),
+    );
+    // At midpoint (value >= 0.5), the circle is edge-on — swap camera here
+    _flipController.addListener(() {
+      if (_flipController.value >= 0.5 && !_cameraSwapped) {
+        _cameraSwapped = true;
+        _performCameraSwitch();
+      }
+    });
+    _flipController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _flipController.reset();
+        _flipping = false;
+        _cameraSwapped = false;
+      }
+    });
+
     initializeCamera();
   }
 
@@ -82,6 +109,7 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
     _ringPulseController.dispose();
     _faceDetectedController.dispose();
     _scanLineController.dispose();
+    _flipController.dispose();
     controller?.dispose();
     faceDetector.close();
     super.dispose();
@@ -218,7 +246,18 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
     return CustomPaint(painter: painter);
   }
 
-  void _toggleCameraDirection() async {
+  /// Kick off the visual flip. Camera swap happens at the midpoint.
+  void _triggerFlip() {
+    if (_flipping) return;
+    _flipping = true;
+    _cameraSwapped = false;
+    // Clear any stale face overlays so they don't show during the flip.
+    setState(() {
+      _scanResults = null;
+      _faceDetected = false;
+    });
+    _faceDetectedController.reverse();
+    // Pre-compute the new direction so _performCameraSwitch can use it.
     if (camDirec == CameraLensDirection.back) {
       camDirec = CameraLensDirection.front;
       description = cameras[1];
@@ -226,12 +265,15 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
       camDirec = CameraLensDirection.back;
       description = cameras[0];
     }
-    await controller.stopImageStream();
-    setState(() {
-      controller;
-    });
+    _flipController.forward(from: 0.0);
+  }
 
-    initializeCamera();
+  /// Fired at the midpoint (circle edge-on) — camera switch is invisible.
+  Future<void> _performCameraSwitch() async {
+    try {
+      await controller?.stopImageStream();
+    } catch (_) {}
+    if (mounted) await initializeCamera();
   }
 
   @override
@@ -268,16 +310,25 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
                       scale: _faceDetectedScale,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 8),
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.withOpacity(0.25),
                           borderRadius: BorderRadius.circular(30),
-                          border: Border.all(color: Colors.greenAccent, width: 1),
+                          border: Border.all(
+                            color: Colors.greenAccent,
+                            width: 1,
+                          ),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.face, color: Colors.greenAccent, size: 18),
+                            Icon(
+                              Icons.face,
+                              color: Colors.greenAccent,
+                              size: 18,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'Face Detected',
@@ -299,51 +350,68 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
               // Camera container with pulsing ring
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
                   child: Center(
                     child: AnimatedBuilder(
-                      animation: Listenable.merge(
-                          [_ringPulseController, _faceDetectedController]),
+                      animation: Listenable.merge([
+                        _ringPulseController,
+                        _faceDetectedController,
+                        _flipAnim,
+                      ]),
                       builder: (context, child) {
                         final glowColor = _faceDetected
                             ? Colors.greenAccent
                             : const Color(0xFF6C63FF);
-                        return Stack(
+
+                        // Coin-flip transform applied to the entire stack
+                        final t = _flipAnim.value;
+                        final angle = t <= 0.5
+                            ? t * pi        // 0 → π/2
+                            : (1.0 - t) * pi; // π/2 → 0
+                        final matrix = Matrix4.identity()
+                          ..setEntry(3, 2, 0.002)
+                          ..rotateY(angle);
+
+                        return Transform(
                           alignment: Alignment.center,
-                          children: [
-                            // Outer glow ring
-                            Transform.scale(
-                              scale: _ringPulse.value * 1.07,
-                              child: Container(
-                                width: size.width - 16,
-                                height: size.width - 16,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: glowColor.withOpacity(0.2),
-                                    width: 8,
+                          transform: matrix,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Outer glow ring
+                              Transform.scale(
+                                scale: _ringPulse.value * 1.07,
+                                child: Container(
+                                  width: size.width - 16,
+                                  height: size.width - 16,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: glowColor.withOpacity(0.2),
+                                      width: 8,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            // Mid ring
-                            Transform.scale(
-                              scale: _ringPulse.value * 1.035,
-                              child: Container(
-                                width: size.width - 16,
-                                height: size.width - 16,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: glowColor.withOpacity(0.35),
-                                    width: 2,
+                              // Mid ring
+                              Transform.scale(
+                                scale: _ringPulse.value * 1.035,
+                                child: Container(
+                                  width: size.width - 16,
+                                  height: size.width - 16,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: glowColor.withOpacity(0.35),
+                                      width: 2,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            // Camera circle
-                            child!,
-                          ],
+                              // Camera circle
+                              child!,
+                            ],
+                          ),
                         );
                       },
                       child: AspectRatio(
@@ -353,11 +421,13 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.6),
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white38, width: 1.5),
+                            border: Border.all(
+                              color: Colors.white38,
+                              width: 1.5,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color:
-                                    const Color(0xFF6C63FF).withOpacity(0.25),
+                                color: const Color(0xFF6C63FF).withOpacity(0.25),
                                 blurRadius: 30,
                                 spreadRadius: 4,
                               ),
@@ -366,45 +436,46 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
                           child: ClipOval(
                             child:
                                 (controller != null &&
-                                        controller.value.isInitialized)
-                                    ? Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          SizedBox.expand(
-                                            child: FittedBox(
-                                              fit: BoxFit.cover,
-                                              child: SizedBox(
-                                                width: controller
-                                                    .value.previewSize!.height,
-                                                height: controller
-                                                    .value.previewSize!.width,
-                                                child: Stack(
-                                                  fit: StackFit.expand,
-                                                  children: [
-                                                    CameraPreview(controller),
-                                                    buildResult(),
-                                                  ],
-                                                ),
-                                              ),
+                                    controller.value.isInitialized)
+                                ? Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      SizedBox.expand(
+                                        child: FittedBox(
+                                          fit: BoxFit.cover,
+                                          child: SizedBox(
+                                            width: controller
+                                                .value.previewSize!.height,
+                                            height: controller
+                                                .value.previewSize!.width,
+                                            child: Stack(
+                                              fit: StackFit.expand,
+                                              children: [
+                                                CameraPreview(controller),
+                                                buildResult(),
+                                              ],
                                             ),
                                           ),
-                                          // Scanning line overlay
-                                          AnimatedBuilder(
-                                            animation: _scanLine,
-                                            builder: (context, _) {
-                                              return CustomPaint(
-                                                painter: _ScanLinePainter(
-                                                    _scanLine.value),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      )
-                                    : const Center(
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
                                         ),
                                       ),
+                                      // Scanning line overlay
+                                      AnimatedBuilder(
+                                        animation: _scanLine,
+                                        builder: (context, _) {
+                                          return CustomPaint(
+                                            painter: _ScanLinePainter(
+                                              _scanLine.value,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  )
+                                : const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
@@ -422,7 +493,7 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
                   _AnimatedIconButton(
                     icon: Icons.flip_camera_ios,
                     label: 'Flip Camera',
-                    onPressed: _toggleCameraDirection,
+                    onPressed: _triggerFlip,
                   ),
                 ],
               ),
@@ -438,6 +509,7 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
 // Scanning line effect painter
 class _ScanLinePainter extends CustomPainter {
   final double progress;
+
   _ScanLinePainter(this.progress);
 
   @override
@@ -486,12 +558,13 @@ class _AnimatedIconButtonState extends State<_AnimatedIconButton>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
-    _scale =
-        Tween<double>(begin: 1.0, end: 0.93).animate(CurvedAnimation(
-      parent: _ctrl,
-      curve: Curves.easeOut,
-    ));
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.93,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
   }
 
   @override
@@ -585,10 +658,11 @@ class FaceDetectorPainter extends CustomPainter {
           List<Point<int>>? points = value.points;
           for (Point p in points) {
             Offset offset = Offset(
-                camDire2 == CameraLensDirection.front
-                    ? (absoluteImageSize.width - p.x.toDouble()) * scaleX
-                    : p.x.toDouble() * scaleX,
-                p.y.toDouble() * scaleY);
+              camDire2 == CameraLensDirection.front
+                  ? (absoluteImageSize.width - p.x.toDouble()) * scaleX
+                  : p.x.toDouble() * scaleX,
+              p.y.toDouble() * scaleY,
+            );
             offsetPoints.add(offset);
           }
           canvas.drawPoints(PointMode.points, offsetPoints, p2);
