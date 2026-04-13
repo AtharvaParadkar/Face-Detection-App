@@ -40,13 +40,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       parent: _entryController,
       curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
     );
-    _titleSlide = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _entryController,
-      curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
-    ));
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _entryController,
+            curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
+          ),
+        );
 
     _subtitleFade = CurvedAnimation(
       parent: _entryController,
@@ -57,25 +57,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       parent: _entryController,
       curve: const Interval(0.4, 0.7, curve: Curves.easeOut),
     );
-    _btn1Slide = Tween<Offset>(
-      begin: const Offset(0, 0.4),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _entryController,
-      curve: const Interval(0.4, 0.7, curve: Curves.easeOut),
-    ));
+    _btn1Slide = Tween<Offset>(begin: const Offset(0, 0.4), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _entryController,
+            curve: const Interval(0.4, 0.7, curve: Curves.easeOut),
+          ),
+        );
 
     _btn2Fade = CurvedAnimation(
       parent: _entryController,
       curve: const Interval(0.6, 0.9, curve: Curves.easeOut),
     );
-    _btn2Slide = Tween<Offset>(
-      begin: const Offset(0, 0.4),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _entryController,
-      curve: const Interval(0.6, 0.9, curve: Curves.easeOut),
-    ));
+    _btn2Slide = Tween<Offset>(begin: const Offset(0, 0.4), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _entryController,
+            curve: const Interval(0.6, 0.9, curve: Curves.easeOut),
+          ),
+        );
 
     _pulse = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
@@ -191,8 +191,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                     StaticFaceDetection(),
                                 transitionsBuilder: (_, anim, __, child) =>
                                     FadeTransition(opacity: anim, child: child),
-                                transitionDuration:
-                                    const Duration(milliseconds: 400),
+                                transitionDuration: const Duration(
+                                  milliseconds: 400,
+                                ),
                               ),
                             );
                           },
@@ -218,8 +219,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                     const RealTimeFaceDetection(),
                                 transitionsBuilder: (_, anim, __, child) =>
                                     FadeTransition(opacity: anim, child: child),
-                                transitionDuration:
-                                    const Duration(milliseconds: 400),
+                                transitionDuration: const Duration(
+                                  milliseconds: 400,
+                                ),
                               ),
                             );
                           },
@@ -275,9 +277,10 @@ class _AnimatedNavButtonState extends State<_AnimatedNavButton>
       vsync: this,
       duration: const Duration(milliseconds: 120),
     );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.96).animate(
-      CurvedAnimation(parent: _hoverController, curve: Curves.easeOut),
-    );
+    _scaleAnim = Tween<double>(
+      begin: 1.0,
+      end: 0.96,
+    ).animate(CurvedAnimation(parent: _hoverController, curve: Curves.easeOut));
   }
 
   @override
@@ -323,7 +326,7 @@ class _AnimatedNavButtonState extends State<_AnimatedNavButton>
                       color: const Color(0xFF6C63FF).withOpacity(0.3),
                       blurRadius: 20,
                       spreadRadius: 2,
-                    )
+                    ),
                   ]
                 : [],
           ),
@@ -349,8 +352,11 @@ class _AnimatedNavButtonState extends State<_AnimatedNavButton>
                   ),
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios,
-                  size: 20, color: Colors.white54),
+              const Icon(
+                Icons.arrow_forward_ios,
+                size: 20,
+                color: Colors.white54,
+              ),
             ],
           ),
         ),

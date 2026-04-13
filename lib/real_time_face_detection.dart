@@ -283,8 +283,15 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text("Real-Time Detection",style: TextStyle(color: Colors.white),),
-        backgroundColor: Colors.transparent,leading: InkWell(onTap: ()=>Navigator.pop(context),child: Icon(Icons.chevron_left,color: Colors.white,)),
+        title: const Text(
+          "Real-Time Detection",
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.transparent,
+        leading: InkWell(
+          onTap: () => Navigator.pop(context),
+          child: Icon(Icons.chevron_left, color: Colors.white),
+        ),
         elevation: 0,
       ),
       body: Container(
@@ -366,7 +373,8 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
                         // Coin-flip transform applied to the entire stack
                         final t = _flipAnim.value;
                         final angle = t <= 0.5
-                            ? t * pi        // 0 → π/2
+                            ? t *
+                                  pi // 0 → π/2
                             : (1.0 - t) * pi; // π/2 → 0
                         final matrix = Matrix4.identity()
                           ..setEntry(3, 2, 0.002)
@@ -427,7 +435,9 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF6C63FF).withOpacity(0.25),
+                                color: const Color(
+                                  0xFF6C63FF,
+                                ).withOpacity(0.25),
                                 blurRadius: 30,
                                 spreadRadius: 4,
                               ),
@@ -445,9 +455,13 @@ class _RealTimeFaceDetectionState extends State<RealTimeFaceDetection>
                                           fit: BoxFit.cover,
                                           child: SizedBox(
                                             width: controller
-                                                .value.previewSize!.height,
+                                                .value
+                                                .previewSize!
+                                                .height,
                                             height: controller
-                                                .value.previewSize!.width,
+                                                .value
+                                                .previewSize!
+                                                .width,
                                             child: Stack(
                                               fit: StackFit.expand,
                                               children: [

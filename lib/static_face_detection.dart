@@ -92,8 +92,9 @@ class _StaticFaceDetectionState extends State<StaticFaceDetection>
   }
 
   Future<void> _imageFromGallery() async {
-    XFile? pickedImage =
-        await imagePicker.pickImage(source: ImageSource.gallery);
+    XFile? pickedImage = await imagePicker.pickImage(
+      source: ImageSource.gallery,
+    );
     if (pickedImage != null) {
       image = File(pickedImage.path);
       detectFace();
@@ -101,8 +102,9 @@ class _StaticFaceDetectionState extends State<StaticFaceDetection>
   }
 
   Future<void> _imageFromCamera() async {
-    XFile? clickedImage =
-        await imagePicker.pickImage(source: ImageSource.camera);
+    XFile? clickedImage = await imagePicker.pickImage(
+      source: ImageSource.camera,
+    );
     if (clickedImage != null) {
       image = File(clickedImage.path);
       detectFace();
@@ -125,7 +127,9 @@ class _StaticFaceDetectionState extends State<StaticFaceDetection>
     for (int i = 0; i < faces.length; i++) {
       Face f = faces[i];
       if (f.smilingProbability != null) {
-        String status = f.smilingProbability! > 0.5 ? 'Smiling 😊' : 'Serious 😐';
+        String status = f.smilingProbability! > 0.5
+            ? 'Smiling 😊'
+            : 'Serious 😐';
         faceStatus += 'Face ${i + 1}: $status\n';
       }
     }
@@ -154,8 +158,15 @@ class _StaticFaceDetectionState extends State<StaticFaceDetection>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Static Detection",style: TextStyle(color: Colors.white),),
-        backgroundColor: Colors.transparent,leading: InkWell(onTap: ()=>Navigator.pop(context),child: Icon(Icons.chevron_left,color: Colors.white,)),
+        title: const Text(
+          "Static Detection",
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.transparent,
+        leading: InkWell(
+          onTap: () => Navigator.pop(context),
+          child: Icon(Icons.chevron_left, color: Colors.white),
+        ),
         elevation: 0,
       ),
       extendBodyBehindAppBar: true,
@@ -190,8 +201,7 @@ class _StaticFaceDetectionState extends State<StaticFaceDetection>
                   boxShadow: (image != null && !isProcessing)
                       ? [
                           BoxShadow(
-                            color:
-                                const Color(0xFF6C63FF).withOpacity(0.2),
+                            color: const Color(0xFF6C63FF).withOpacity(0.2),
                             blurRadius: 20,
                             spreadRadius: 2,
                           ),
@@ -242,70 +252,72 @@ class _StaticFaceDetectionState extends State<StaticFaceDetection>
                           ),
                         )
                       : (image != null && img != null)
-                          ? FadeTransition(
-                              opacity: _imageFade,
-                              child: SlideTransition(
-                                position: _imageSlide,
-                                child: FittedBox(
-                                  fit: BoxFit.contain,
-                                  child: SizedBox(
-                                    width: img!.width.toDouble(),
-                                    height: img!.height.toDouble(),
-                                    child: CustomPaint(
-                                      painter: FacePainter(
-                                        facesList: faces,
-                                        imageFile: img,
-                                      ),
-                                    ),
+                      ? FadeTransition(
+                          opacity: _imageFade,
+                          child: SlideTransition(
+                            position: _imageSlide,
+                            child: FittedBox(
+                              fit: BoxFit.contain,
+                              child: SizedBox(
+                                width: img!.width.toDouble(),
+                                height: img!.height.toDouble(),
+                                child: CustomPaint(
+                                  painter: FacePainter(
+                                    facesList: faces,
+                                    imageFile: img,
                                   ),
                                 ),
                               ),
-                            )
-                          : Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  TweenAnimationBuilder<double>(
-                                    tween: Tween(begin: 0.9, end: 1.0),
-                                    duration: const Duration(milliseconds: 1200),
-                                    curve: Curves.easeInOut,
-                                    builder: (_, v, child) =>
-                                        Transform.scale(scale: v, child: child),
-                                    child: Container(
-                                      width: 80,
-                                      height: 80,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.white.withOpacity(0.08),
-                                        border: Border.all(
-                                            color: Colors.white24, width: 1),
-                                      ),
-                                      child: const Icon(
-                                        Icons.add_a_photo,
-                                        color: Colors.white54,
-                                        size: 36,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'No Image Selected',
-                                    style: TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Tap a button below to get started',
-                                    style: TextStyle(
-                                      color: Colors.white30,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
                             ),
+                          ),
+                        )
+                      : Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0.9, end: 1.0),
+                                duration: const Duration(milliseconds: 1200),
+                                curve: Curves.easeInOut,
+                                builder: (_, v, child) =>
+                                    Transform.scale(scale: v, child: child),
+                                child: Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.08),
+                                    border: Border.all(
+                                      color: Colors.white24,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.add_a_photo,
+                                    color: Colors.white54,
+                                    size: 36,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'No Image Selected',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Tap a button below to get started',
+                                style: TextStyle(
+                                  color: Colors.white30,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                 ),
               ),
 
@@ -338,10 +350,7 @@ class _StaticFaceDetectionState extends State<StaticFaceDetection>
                   builder: (context, child) {
                     return Transform.translate(
                       offset: Offset(0, _resultSlide.value),
-                      child: FadeTransition(
-                        opacity: _resultFade,
-                        child: child,
-                      ),
+                      child: FadeTransition(opacity: _resultFade, child: child),
                     );
                   },
                   child: Container(
@@ -356,8 +365,9 @@ class _StaticFaceDetectionState extends State<StaticFaceDetection>
                       color: Colors.black.withOpacity(0.75),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: const Color(0xFF6C63FF).withOpacity(0.4),
-                          width: 1),
+                        color: const Color(0xFF6C63FF).withOpacity(0.4),
+                        width: 1,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFF6C63FF).withOpacity(0.15),
@@ -371,8 +381,11 @@ class _StaticFaceDetectionState extends State<StaticFaceDetection>
                         const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.analytics_outlined,
-                                color: Color(0xFF6C63FF), size: 20),
+                            Icon(
+                              Icons.analytics_outlined,
+                              color: Color(0xFF6C63FF),
+                              size: 20,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'Detection Results',
@@ -431,9 +444,13 @@ class _AnimatedButtonState extends State<_AnimatedButton>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
-    _scale = Tween<double>(begin: 1.0, end: 0.94).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.94,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
   }
 
   @override

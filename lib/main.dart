@@ -5,7 +5,7 @@ import 'home_page.dart';
 
 late List<CameraDescription> cameras;
 
-Future<void> main () async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
   runApp(FaceDetection());
