@@ -1,3 +1,4 @@
+import 'package:face_detection/object_detection.dart';
 import 'package:face_detection/real_time_face_detection.dart';
 import 'package:face_detection/static_face_detection.dart';
 import 'package:flutter/material.dart';
@@ -217,6 +218,34 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               PageRouteBuilder(
                                 pageBuilder: (_, anim, __) =>
                                     const RealTimeFaceDetection(),
+                                transitionsBuilder: (_, anim, __, child) =>
+                                    FadeTransition(opacity: anim, child: child),
+                                transitionDuration: const Duration(
+                                  milliseconds: 400,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Button 3
+                    FadeTransition(
+                      opacity: _btn2Fade,
+                      child: SlideTransition(
+                        position: _btn2Slide,
+                        child: _buildNavButton(
+                          context: context,
+                          title: 'Object Detection',
+                          icon: Icons.view_in_ar_sharp,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              PageRouteBuilder(
+                                pageBuilder: (_, anim, __) =>
+                                    const ObjectDetection(),
                                 transitionsBuilder: (_, anim, __, child) =>
                                     FadeTransition(opacity: anim, child: child),
                                 transitionDuration: const Duration(
